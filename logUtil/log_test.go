@@ -12,7 +12,6 @@ func TestLog(t *testing.T) {
 	ErrLog("errTest", fmt.Errorf("Err Test"))
 
 	//	time.Sleep(time.Second * 20)
-
 	FailLog("%s,failTestLog", "TestLog")
 
 }
