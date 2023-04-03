@@ -1,16 +1,18 @@
 package logUtil
 
 import (
+	"io"
 	"os"
 	"time"
 
-	"github.com/natefinch/lumberjack"
+	rotatelogs "github.com/lestrrat/go-file-rotatelogs"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
 const (
-	logTmFmt = "2006-01-02 15:04:05"
+	logTmFmt            = "2006-01-02 15:04:05"
+	con_default_logPath = "./log"
 )
 
 //
@@ -53,13 +55,36 @@ func GetConsoleEncoder() zapcore.Encoder {
 
 // GetWriteSyncer 自定义的WriteSyncer
 func GetWriteSyncer() zapcore.WriteSyncer {
-	lumberJackLogger := &lumberjack.Logger{
-		Filename:   "./zap.log",
-		MaxSize:    200,
-		MaxBackups: 10,
-		MaxAge:     30,
+	//lumberJackLogger := &lumberjack.Logger{
+	//	Filename:   "./zap.log",
+	//	MaxSize:    200,
+	//	MaxBackups: 10,
+	//	MaxAge:     30,
+	//}
+	return zapcore.AddSync(getWriter())
+	//return zapcore.AddSync(lumberJackLogger)
+}
+
+func getWriter() io.Writer {
+	f, err := os.Stat(con_default_logPath)
+	if err != nil || f.IsDir() == false {
+		err = os.MkdirAll(con_default_logPath, os.ModePerm)
+		if err != nil {
+			panic(err)
+		}
 	}
-	return zapcore.AddSync(lumberJackLogger)
+
+	hook, err := rotatelogs.New(
+		con_default_logPath+"/%Y-%m-%d_%H.log",
+		rotatelogs.WithLinkName(con_default_logPath),
+		rotatelogs.WithMaxAge(time.Hour*24*30),
+		rotatelogs.WithRotationTime(time.Hour))
+
+	if err != nil {
+		panic(err)
+	}
+
+	return hook
 }
 
 // GetLevelEnabler 自定义的LevelEnabler
