@@ -16,6 +16,10 @@ func InitDefaultNumFactory(seed, add int64) {
 	defaultNumFactory = NewNumIdFactory(seed, add)
 }
 
+func GetDefault() *NumIdFactory {
+	return defaultNumFactory
+}
+
 type NumIdFactory struct {
 	seed int64
 	add  int64
