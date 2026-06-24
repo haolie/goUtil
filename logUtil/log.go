@@ -1,46 +1,55 @@
-package logUtil
+package logutil
 
 import (
-	"fmt"
-
-	"go.uber.org/zap"
+	"log/slog"
+	"os"
 )
 
-const (
-	con_log_file    = "fileName"
-	con_log_funName = "funName"
-	con_log_content = "content"
-	con_log_info    = "info"
+var (
+	debugLogger *slog.Logger
+	infoLogger  *slog.Logger
+	warnLogger  *slog.Logger
+	errorLogger *slog.Logger
 )
 
-var logger *zap.Logger
+type logLvl int
 
-func InitLog() {
-	GetLogger()
+// Level 实现 slog.Leveler 接口，返回自定义级别（低于 Debug，用于控制台全量输出）
+func (lvl logLvl) Level() slog.Level {
+	return -10
 }
 
-func InfoLog(info, fileName, funName, format string, args ...interface{}) {
-	if len(args) > 0 {
-		format = fmt.Sprintf(format, args)
-	}
-	logger.Info(info, zap.String(con_log_file, fileName), zap.String(con_log_funName, funName), zap.String(con_log_content, format))
+// InitLog 初始化日志系统。basePath 为日志文件根目录，按小时轮转写入文件，同时输出到控制台。
+func InitLog(basePath string) {
+	debugLogger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		AddSource: false,
+		Level:     logLvl(0),
+	}))
+
+	infoLogger = slog.New(slog.NewTextHandler(newLogWriter(basePath, "info"), nil))
+	warnLogger = slog.New(slog.NewTextHandler(newLogWriter(basePath, "warn"), nil))
+	errorLogger = slog.New(slog.NewTextHandler(newLogWriter(basePath, "err"), nil))
 }
 
-func ErrLog(info string, err error) {
-	logger.Error(info, zap.String("Err", fmt.Sprintf("%v", err)))
+// Debug 输出调试日志，仅写入控制台。
+func Debug(str string) {
+	debugLogger.Debug(str)
 }
 
-func DebugLog(info, format string, args ...interface{}) {
-	if len(args) > 0 {
-		format = fmt.Sprintf(format, args)
-	}
-
-	logger.Debug(info, zap.String("debug", format))
+// Info 输出信息日志，写入文件（info）并同步输出到控制台。
+func Info(str string) {
+	infoLogger.Info(str)
+	debugLogger.Info(str)
 }
 
-func FailLog(format string, args ...interface{}) {
-	if len(args) > 0 {
-		format = fmt.Sprintf(format, args)
-	}
-	logger.Fatal("fail", zap.String("fail", format))
+// Warn 输出警告日志，写入文件（warn）并同步输出到控制台。
+func Warn(str string) {
+	warnLogger.Warn(str)
+	debugLogger.Warn(str)
+}
+
+// Error 输出错误日志，写入文件（err）并同步输出到控制台。
+func Error(str string) {
+	errorLogger.Error(str)
+	debugLogger.Error(str)
 }
